@@ -1,0 +1,8 @@
+group servers {
+    hosts = [ # end of line comments should work
+        "node01", "node02'"
+    ] % multiple flavors too
+    timeout = 30.0f
+}
+log_path=/var/log/my.log
+anon { }
