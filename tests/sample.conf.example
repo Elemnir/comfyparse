@@ -5,4 +5,3 @@ group servers {
     timeout = 30.0f
 }
 log_path=/var/log/my.log
-anon { }

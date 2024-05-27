@@ -1,13 +1,8 @@
 import enum
 from typing import Union
 
-from ._config import ConfigBlock, Namespace
-from ._lexer import ComfyLexer, State as LexerState
-
-
-State = enum.Enum("State", [
-    "READY", "BLOCK", "STMT", "LIST"
-])
+from .config import ConfigBlock, Namespace
+from .lexer import ComfyLexer, State as LexerState
 
 
 class ParseError(Exception):
