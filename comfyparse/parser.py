@@ -1,4 +1,3 @@
-import enum
 from typing import Union
 
 from comfyparse.config import ConfigBlock, Namespace
@@ -54,7 +53,7 @@ class ComfyParser:
                 block_stack[-1][kind.value] = new_block
                 block_stack.append(new_block)
             elif lexer.peek().kind == LexerState.STRING and lexer.peek(1).value == '{':
-                name, _ = lexer.consume(2)
+                name = lexer.consume(2)[0]
                 new_block = Namespace(name=name.value)
                 try:
                     block_stack[-1][kind.value][name.value] = new_block
@@ -69,10 +68,11 @@ class ComfyParser:
             block_stack.pop()
 
         def parse_stmt() -> None:
-            key, _ = lexer.consume(2)
+            key = lexer.consume(2)[0]
             value = parse_value()
             if lexer.peek().value not in lexer.STMTEND:
                 raise ParseError(f"Missing ';' or newline on line {lineno} after '{value}'")
+            lexer.consume()
             block_stack[-1][key.value] = value
 
         def parse_value() -> Union[str, list[str]]:
@@ -114,4 +114,4 @@ class ComfyParser:
         except IndexError as exc:
             raise ParseError("Unexpected EOF") from exc
 
-        return self._config_spec.validate(parsed)
+        return self._config_spec.validate_block(parsed)

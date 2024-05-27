@@ -19,5 +19,5 @@ class TestParser(unittest.TestCase):
         parser = ComfyParser()
         parser.add_setting("log_path")
 
-        config = parser.parse_config_string("log_path=/var/log/my.log")
+        config = parser.parse_config_string("log_path=/var/log/my.log;")
         self.assertEqual(config.log_path, "/var/log/my.log")

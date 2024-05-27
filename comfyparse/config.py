@@ -22,14 +22,14 @@ class Namespace:
                 self.name if self.name else "<unnamed>", name
             )) from exc
 
-    def __setattr__(self, name, value):
-        self.attrs[name] = value
-
     def __contains__(self, key):
         return key in self.attrs
 
     def __getitem__(self, index):
         return self.attrs[index]
+
+    def __setitem__(self, name, value):
+        self.attrs[name] = value
 
     def __iter__(self):
         return self.attrs.__iter__()

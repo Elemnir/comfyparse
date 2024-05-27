@@ -75,7 +75,7 @@ class ComfyLexer:
                 elif self.state == State.VALUE:
                     nchar = self._peek_char()
                     if nchar in self.WHITESPACE or nchar in self.COMMENT or nchar in self.SYNTAX:
-                        self._tokens.append(Token(token, self.state))
+                        self._tokens.append(Token(token, State.STRING))
                         self.state = State.READY
                     elif nchar in self.QUOTES:
                         raise SyntaxError("Unexpected quote in non-string token")
@@ -96,7 +96,7 @@ class ComfyLexer:
         return self._tokens[self._tknidx + offset]
 
     def consume(self, num: int=1) -> list[Token]:
-        tokens = self._tokens[self._tknidx:self._tknidx+num-1]
+        tokens = self._tokens[self._tknidx:self._tknidx+num]
         self._tknidx += num
         return tokens
 
