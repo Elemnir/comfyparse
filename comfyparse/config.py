@@ -1,5 +1,5 @@
-import copy
-
+from collections.abc import Callable, Sequence
+from typing import Any, Optional, Union
 
 class ConfigSpecError(Exception):
     pass
@@ -10,36 +10,40 @@ class ValidationError(Exception):
 
 
 class Namespace:
-    def __init__(self, name=None, **kwargs):
-        self.attrs = dict(kwargs)
-        self.name = name
+    def __init__(self, name: Optional[str] = None, **kwargs):
+        self._attrs = dict(kwargs)
+        self.name = name if name else "<unnamed>"
 
-    def __getattr__(self, name):
-        try:
-            return self.attrs[name]
-        except KeyError as exc:
-            raise AttributeError("Namespace {} has no attribute: {}".format(
-                self.name if self.name else "<unnamed>", name
-            )) from exc
+    def __getattr__(self, name: str) -> Any:
+        if name.startswith("_") or name not in self._attrs:
+            raise AttributeError(f"Namespace {self.name} has no attribute '{name}'")
+        return self._attrs[name]
 
-    def __contains__(self, key):
-        return key in self.attrs
+    def __contains__(self, key: str) -> bool:
+        return key in self._attrs
 
-    def __getitem__(self, index):
-        return self.attrs[index]
+    def __getitem__(self, index: str) -> Any:
+        return self._attrs[index]
 
-    def __setitem__(self, name, value):
-        self.attrs[name] = value
+    def __setitem__(self, name: str, value: Any) -> None:
+        self._attrs[name] = value
 
     def __iter__(self):
-        return self.attrs.__iter__()
+        return self._attrs.__iter__()
 
-    def get(self, key, default=None):
-        return self.attrs.get(key, default)
+    def copy(self) -> 'Namespace':
+        return Namespace(name=self.name, **self._attrs)
+
+    def get(self, key: str, default: Optional[Any] = None) -> Any:
+        return self._attrs.get(key, default)
 
 
 class ConfigSetting:
-    def __init__(self, name, desc="", required=False, default=None, choices=None, convert=None, validate=None):
+    def __init__(
+            self, name: str, desc: str = "", required: bool = False,
+            default: Optional[Any] = None, choices: Optional[Sequence] = None,
+            convert: Optional[Callable[[Union[list, str]], Any]] = None,
+            validate: Optional[Callable[[Any], None]] = None):
         self.name = name
         self.desc = desc
         self.required = required
@@ -48,12 +52,17 @@ class ConfigSetting:
         self.convert = convert
         self.validate = validate
 
-    def validate_value(self, raw_value=None):
+    def validate_value(self, raw_value: Optional[str] = None) -> Any:
         if self.required and raw_value is None:
             raise ValidationError(f"Missing required setting: {self.name}")
 
         if raw_value is not None:
-            value = self.convert(raw_value) if self.convert else raw_value
+            try:
+                value = self.convert(raw_value) if self.convert else raw_value
+            except Exception as exc:
+                raise ValidationError(
+                    f"Error on setting '{self.name}' with value '{raw_value}'"
+                ) from exc
         else:
             value = self.default
 
@@ -69,30 +78,38 @@ class ConfigSetting:
 
 
 class ConfigBlock:
-    def __init__(self, kind, named=False, desc="", required=False, validate=None):
+    def __init__(
+            self, kind: str, named: bool = False, desc: str = "", required: bool = False,
+            validate: Optional[Callable[[Namespace], None]] = None):
         self.kind = kind
         self.named = named
         self.desc = desc
         self.required = required
         self.validate = validate
-        self.settings = {}
-        self.children = {}
+        self.settings: dict[str, ConfigSetting] = {}
+        self.children: dict[str, 'ConfigBlock'] = {}
 
-    def add_block(self, kind, named=False, desc="", required=False, validate=None):
+    def add_block(
+            self, kind: str, named: bool = False, desc: str = "", required: bool = False,
+            validate: Optional[Callable[[Namespace], None]] = None) -> 'ConfigBlock':
         if kind in self.settings or kind in self.children:
             raise ConfigSpecError(f"Duplicate use of setting name or block kind: {kind}")
         self.children[kind] = ConfigBlock(kind, named, desc, required, validate)
         return self.children[kind]
 
-    def add_setting(self, name, desc="", required=False, default=None, choices=None, convert=None, validate=None):
-        if name in self.children:
+    def add_setting(
+            self, name: str, desc: str = "", required: bool = False,
+            default: Optional[Any] = None, choices: Optional[Sequence] = None,
+            convert: Optional[Callable[[Union[list, str]], Any]] = None,
+            validate: Optional[Callable[[Any], None]] = None) -> None:
+        if name in self.settings or name in self.children:
             raise ConfigSpecError(f"Duplicate use of setting name or block kind: {name}")
         self.settings[name] = ConfigSetting(
             name, desc, required, default, choices, convert, validate
         )
 
-    def validate_block(self, block: Namespace):
-        validated = copy.deepcopy(block)
+    def validate_block(self, block: Namespace) -> Namespace:
+        validated = block.copy()
         for key in block:
             if key not in self.settings and key not in self.children:
                 raise ValidationError(f"Unrecognized setting or block kind: {key}")

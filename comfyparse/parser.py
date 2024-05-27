@@ -1,4 +1,5 @@
-from typing import Union
+from collections.abc import Callable, Sequence
+from typing import Any, Optional, Union
 
 from comfyparse.config import ConfigBlock, Namespace
 from comfyparse.lexer import ComfyLexer, State as LexerState
@@ -11,24 +12,27 @@ class ParseError(Exception):
 class ComfyParser:
     def __init__(self):
         self._config_spec = ConfigBlock("GLOBAL")
-        self._config_values = Namespace()
 
-    def add_setting(self, name, desc="", required=False, default=None, choices=None, convert=None, validate=None):
-        self._config_spec.add_setting(name, desc, required, default, choices, convert, validate)
+    def add_setting(
+            self, name: str, desc: str = "", required: bool = False,
+            default: Optional[Any] = None, choices: Optional[Sequence] = None,
+            convert: Optional[Callable[[Union[list, str]], Any]] = None,
+            validate: Optional[Callable[[Any], None]] = None) -> None:
+        self._config_spec.add_setting(
+            name, desc, required, default, choices, convert, validate
+        )
 
-    def add_block(self, kind, named=False, desc="", required=False, validate=None):
+    def add_block(
+            self, kind: str, named: bool = False, desc: str = "", required: bool = False,
+            validate: Optional[Callable[[Namespace], None]] = None) -> ConfigBlock:
         return self._config_spec.add_block(kind, named, desc, required, validate)
 
-    def clear_config(self):
-        self._config_values = Namespace()
-
-    def parse_config_file(self, path):
+    def parse_config_file(self, path: str) -> Namespace:
         with open(path, 'r') as fp:
             return self.parse_config_string(fp.read())
 
-    def parse_config_string(self, data):
-        self._config_values = self._parse(data)
-        return self._config_values
+    def parse_config_string(self, data: str) -> Namespace:
+        return self._parse(data)
 
     def _parse(self, data: str) -> Namespace:
         lexer = ComfyLexer(data)

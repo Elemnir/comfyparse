@@ -32,7 +32,7 @@ class ComfyLexer:
         self._srcchar += k
         return char
 
-    def _tokenize(self):
+    def _tokenize(self) -> None:
         try:
             token = ""
             while self._srcchar < len(self._source):
@@ -83,6 +83,8 @@ class ComfyLexer:
                         token += self._consume_char()
 
             if self.state != State.READY:
+                if self.state == State.VALUE:
+                    self.state = State.STRING
                 self._tokens.append(Token(token, self.state))
 
         except IndexError:
@@ -100,5 +102,5 @@ class ComfyLexer:
         self._tknidx += num
         return tokens
 
-    def is_exhausted(self):
+    def is_exhausted(self) -> bool:
         return self._tknidx >= len(self._tokens)
