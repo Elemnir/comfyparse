@@ -1,8 +1,8 @@
 import enum
 from typing import Union
 
-from .config import ConfigBlock, Namespace
-from .lexer import ComfyLexer, State as LexerState
+from comfyparse.config import ConfigBlock, Namespace
+from comfyparse.lexer import ComfyLexer, State as LexerState
 
 
 class ParseError(Exception):

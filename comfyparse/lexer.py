@@ -1,4 +1,3 @@
-import argparse
 import collections
 import enum
 
@@ -103,15 +102,3 @@ class ComfyLexer:
 
     def is_exhausted(self):
         return self._tknidx >= len(self._tokens)
-
-
-if __name__ == "__main__":
-    aparse = argparse.ArgumentParser()
-    aparse.add_argument("path")
-    args = aparse.parse_args()
-    with open(args.path, 'r') as fp:
-        text = fp.read()
-    lexer = ComfyLexer(text)
-    lexer.tokenize()
-    print([token.value for token in lexer._tokens])
-    print(lexer.state)
