@@ -1,0 +1,13 @@
+config = *expr
+
+expr = [ block / stmt ]
+
+block = string [ string ] '{' *(block / stmt) '}'
+
+stmt = string '=' value end
+
+end = ';' / '\n'
+
+value = list / string
+
+list = '[' ['\n'] (list/string) *( ['\n'] ',' ['\n'] (list/string)) ['\n'] ']'
