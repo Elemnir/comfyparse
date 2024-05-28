@@ -1,6 +1,9 @@
 import collections
 import enum
+import logging
 
+
+logger = logging.getLogger("comfyparse")
 
 Token = collections.namedtuple('Token', 'value, kind')
 
@@ -87,12 +90,13 @@ class ComfyLexer:
                     self.state = State.STRING
                 self._tokens.append(Token(token, self.state))
 
-        except IndexError:
-            raise SyntaxError("Unexpected EOF")
+        except IndexError as exc:
+            raise SyntaxError("Unexpected EOF") from exc
 
     def tokenize(self) -> None:
         if not self._tokens:
             self._tokenize()
+            logger.debug("Tokens: %s", [tk.value for tk in self._tokens])
 
     def peek(self, offset: int=0) -> Token:
         return self._tokens[self._tknidx + offset]

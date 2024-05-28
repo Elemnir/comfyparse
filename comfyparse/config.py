@@ -43,7 +43,7 @@ class ConfigSetting:
             self, name: str, desc: str = "", required: bool = False,
             default: Optional[Any] = None, choices: Optional[Sequence] = None,
             convert: Optional[Callable[[Union[list, str]], Any]] = None,
-            validate: Optional[Callable[[Any], None]] = None):
+            validate: Optional[Callable[[Any], bool]] = None):
         self.name = name
         self.desc = desc
         self.required = required
@@ -71,8 +71,10 @@ class ConfigSetting:
                 f"Invalid setting {self.name}={raw_value}, choices are {self.choices}"
             )
 
-        if self.validate is not None:
-            self.validate(value)
+        if self.validate is not None and not self.validate(value):
+            raise ValidationError(
+                f"Validation check failed for setting {self.name}={raw_value}"
+            )
 
         return value
 
@@ -80,7 +82,7 @@ class ConfigSetting:
 class ConfigBlock:
     def __init__(
             self, kind: str, named: bool = False, desc: str = "", required: bool = False,
-            validate: Optional[Callable[[Namespace], None]] = None):
+            validate: Optional[Callable[[Namespace], bool]] = None):
         self.kind = kind
         self.named = named
         self.desc = desc
@@ -91,7 +93,7 @@ class ConfigBlock:
 
     def add_block(
             self, kind: str, named: bool = False, desc: str = "", required: bool = False,
-            validate: Optional[Callable[[Namespace], None]] = None) -> 'ConfigBlock':
+            validate: Optional[Callable[[Namespace], bool]] = None) -> 'ConfigBlock':
         if kind in self.settings or kind in self.children:
             raise ConfigSpecError(f"Duplicate use of setting name or block kind: {kind}")
         self.children[kind] = ConfigBlock(kind, named, desc, required, validate)
@@ -101,7 +103,7 @@ class ConfigBlock:
             self, name: str, desc: str = "", required: bool = False,
             default: Optional[Any] = None, choices: Optional[Sequence] = None,
             convert: Optional[Callable[[Union[list, str]], Any]] = None,
-            validate: Optional[Callable[[Any], None]] = None) -> None:
+            validate: Optional[Callable[[Any], bool]] = None) -> None:
         if name in self.settings or name in self.children:
             raise ConfigSpecError(f"Duplicate use of setting name or block kind: {name}")
         self.settings[name] = ConfigSetting(
@@ -131,7 +133,7 @@ class ConfigBlock:
             else:
                 validated[kind] = child.validate_block(block[kind])
 
-        if self.validate is not None:
-            self.validate(validated)
+        if self.validate is not None and not self.validate(validated):
+            raise ValidationError(f"Validation check failed for block {self.kind}")
 
         return validated
