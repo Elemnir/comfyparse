@@ -1,3 +1,10 @@
+"""
+    comfyparse.lexer
+    ----------------
+
+    This module provides ``ComfyLexer``, which is responsible for
+    translating raw input strings into a token stream for the parser.
+"""
 import collections
 import enum
 import logging
@@ -11,6 +18,12 @@ State = enum.Enum('State', ["READY", "VALUE", "STRING", "SYNTAX", "COMMENT"])
 
 
 class ComfyLexer:
+    """Defines a ComfyLexer instance. Use ``peek()`` and ``consume()`` to access token
+    objects. Delays tokenization until explicitly requested, or a method is used which
+    requires tokens to have been generated.
+
+    :param source: The source string to render into tokens.
+    """
     WHITESPACE = "\t "
     COMMENT = "%#"
     SYNTAX = "{}[]=:,;\n"
@@ -94,17 +107,26 @@ class ComfyLexer:
             raise SyntaxError("Unexpected EOF") from exc
 
     def tokenize(self) -> None:
+        """Explicitly invoke tokenization of the input source."""
         if not self._tokens:
             self._tokenize()
             logger.debug("Tokens: %s", [tk.value for tk in self._tokens])
 
     def peek(self, offset: int=0) -> Token:
+        """Return the token at the current position plus the optional offset. Does not
+        affect the current token position.
+        """
+        self.tokenize()
         return self._tokens[self._tknidx + offset]
 
     def consume(self, num: int=1) -> list[Token]:
+        """Return the next num tokens in a list. Increments the current token position by num."""
+        self.tokenize()
         tokens = self._tokens[self._tknidx:self._tknidx+num]
         self._tknidx += num
         return tokens
 
     def is_exhausted(self) -> bool:
+        """Return whether or not all tokens have been consumed."""
+        self.tokenize()
         return self._tknidx >= len(self._tokens)

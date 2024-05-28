@@ -1,3 +1,13 @@
+"""
+
+    comfyparse.parser
+    -----------------
+
+    This module combines the components for declaring a configuration
+    schema with the lexer which tokenizes a raw input string, and
+    implements the grammar parser on top of them to parse an input into
+    a ``Namespace`` and return it.
+"""
 import logging
 from collections.abc import Callable, Sequence
 from typing import Any, Optional, Union
@@ -10,10 +20,11 @@ logger = logging.getLogger("comfyparse")
 
 
 class ParseError(Exception):
-    pass
+    """Raised when encountering an issue during parsing."""
 
 
 class ComfyParser:
+    """Creates a new ComfyParser object."""
     def __init__(self):
         self._config_spec = ConfigBlock("GLOBAL")
 
@@ -22,6 +33,20 @@ class ComfyParser:
             default: Optional[Any] = None, choices: Optional[Sequence] = None,
             convert: Optional[Callable[[Union[list, str]], Any]] = None,
             validate: Optional[Callable[[Any], bool]] = None) -> None:
+        """Define a new global setting.
+
+        :param name: The name of this setting.
+        :param desc: A description of the setting. Included in automatic documentation.
+        :param required: Whether the setting may be omitted. (Default ``False``)
+        :param default: A value to use when the setting is omitted from a configuration.
+        :param choices: Optionally, a list of allowed values for the setting.
+        :param convert: Optionally, a callable which accepts the raw parsed value and
+            returns an object of the appropriate type.
+        :param validate: Optionally, a callable which accepts the (potentially converted)
+            value and returns whether or not it is a valid value for the setting.
+
+        :raise comfyparse.config.ConfigSpecError: Raised if the name is already in use.
+        """
         self._config_spec.add_setting(
             name, desc, required, default, choices, convert, validate
         )
@@ -29,13 +54,36 @@ class ComfyParser:
     def add_block(
             self, kind: str, named: bool = False, desc: str = "", required: bool = False,
             validate: Optional[Callable[[Namespace], bool]] = None) -> ConfigBlock:
+        """Define and return a new global configuration block. 
+
+        :param kind: The identifier for the block.
+        :param named: If ``True``, multiple instances of a block can be included at the
+            global configuration level. Each instance must include an additional name
+            identifier to distinguish them. (Default ``False``)
+        :param desc: A description of the block. Included in automatic documentation.
+        :param required: Whether the block may be omitted. (Default ``False``)
+        :param validate: Optionally, a callable which accepts the block after each field
+        has been validated and returns whether or not is is valid.
+
+        :raise comfyparse.config.ConfigSpecError: Raised if the kind identifier is already
+            in use.
+
+        The returned configuration block similarly supports the ``add_setting`` and 
+        ``add_block`` methods to allow for hierarchical configuration construction.
+        """
         return self._config_spec.add_block(kind, named, desc, required, validate)
 
     def parse_config_file(self, path: str) -> Namespace:
+        """Open and parse the contents of the given file path, returning the resulting
+        configuration Namespace.
+        """
         with open(path, 'r') as fp:
             return self.parse_config_string(fp.read())
 
     def parse_config_string(self, data: str) -> Namespace:
+        """Parse the contents of the given string, returning the resulting configuration
+        Namespace.
+        """
         return self._parse(data)
 
     def _parse(self, data: str) -> Namespace:
@@ -46,6 +94,7 @@ class ComfyParser:
         block_stack = [parsed]
 
         def parse_expr() -> None:
+            """Grammar: expr = [stmt/block]"""
             logger.debug("enter expr")
             if lexer.peek().value == '\n':
                 lexer.consume()
@@ -57,6 +106,7 @@ class ComfyParser:
             logger.debug("exit expr")
 
         def parse_block() -> None:
+            """Grammar: block = string [string] '{' *expr '}'"""
             logger.debug("enter block")
             kind = lexer.consume()[0]
             if lexer.peek().value == '{':
@@ -81,6 +131,7 @@ class ComfyParser:
             logger.debug("exit block")
 
         def parse_stmt() -> None:
+            """Grammar: stmt = string ('=' / ':') value (';' / '\n')"""
             logger.debug("enter stmt")
             key = lexer.consume(2)[0]
             value = parse_value()
@@ -91,12 +142,14 @@ class ComfyParser:
             logger.debug("exit stmt")
 
         def parse_value() -> Union[str, list[str]]:
+            """Grammar: value = list / string"""
             logger.debug("enter value")
             if lexer.peek().value == '[':
                 return parse_list()
             return parse_string()
 
         def parse_list() -> list:
+            """Grammar: list = '[' value *(',' value) ']'"""
             logger.debug("enter list")
             lexer.consume() # Pull off the starting '['
             rval: list[Union[str, list]] = []
@@ -121,6 +174,7 @@ class ComfyParser:
             return rval
 
         def parse_string() -> str:
+            """A string is any set of characters. Follows shell parsing rules."""
             logger.debug("enter string")
             token = lexer.consume()[0]
             if token.kind != LexerState.STRING:
