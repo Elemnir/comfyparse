@@ -8,6 +8,7 @@
 from collections.abc import Callable, Sequence
 from typing import Any, Optional, Union
 
+
 class ConfigSpecError(Exception):
     """Raised when an error occurs while adding a new setting or block."""
 
@@ -23,7 +24,6 @@ class Namespace:
     :param name: An optional name to help identify the namespace.
     :param **kwargs: All keyword arguments are treated as entries in the
         internally-managed dictionary.
-
     """
     def __init__(self, name: Optional[str] = None, **kwargs):
         self._attrs = dict(kwargs)
@@ -45,6 +45,9 @@ class Namespace:
 
     def __iter__(self):
         return self._attrs.__iter__()
+
+    def __str__(self):
+        return f"{self.name}{{" + ", ".join(f"{k}: {v}" for k, v in self._attrs.items()) + "}"
 
     def copy(self) -> 'Namespace':
         """Return a new Namespace which is a copy of this one."""
@@ -208,8 +211,10 @@ class ConfigBlock:
             validated[name] = setting.validate_value(block.get(name, None))
 
         for kind, child in self.children.items():
-            if kind not in block and child.required:
-                raise ValidationError(f"Missing required block: {kind}")
+            if kind not in block:
+                if child.required:
+                    raise ValidationError(f"Missing required block: {kind}")
+                continue
             if isinstance(block[kind], dict):
                 for key in block[kind]:
                     validated[kind][key] = child.validate_block(block[kind][key])

@@ -27,6 +27,7 @@ class ComfyParser:
     """Creates a new ComfyParser object."""
     def __init__(self):
         self._config_spec = ConfigBlock("GLOBAL")
+        self._lineno = 1
 
     def add_setting(
             self, name: str, desc: str = "", required: bool = False,
@@ -89,20 +90,23 @@ class ComfyParser:
     def _parse(self, data: str) -> Namespace:
         lexer = ComfyLexer(data)
         lexer.tokenize()
-        lineno = 1
+        self._lineno = 1
         parsed = Namespace()
         block_stack = [parsed]
 
         def parse_expr() -> None:
             """Grammar: expr = [stmt/block]"""
             logger.debug("enter expr")
-            if lexer.peek().value == '\n':
-                lexer.consume()
-                lineno += 1
-            elif lexer.peek(1).value in lexer.ASSIGNMENT:
+            parse_newline()
+            if lexer.is_exhausted():
+                return
+
+            if lexer.peek(1).value in lexer.ASSIGNMENT:
                 parse_stmt()
             else:
                 parse_block()
+
+            parse_newline()
             logger.debug("exit expr")
 
         def parse_block() -> None:
@@ -110,6 +114,7 @@ class ComfyParser:
             logger.debug("enter block")
             kind = lexer.consume()[0]
             if lexer.peek().value == '{':
+                lexer.consume()
                 new_block = Namespace()
                 block_stack[-1][kind.value] = new_block
                 block_stack.append(new_block)
@@ -122,8 +127,9 @@ class ComfyParser:
                     block_stack[-1][kind.value] = {name.value: new_block}
                 block_stack.append(new_block)
             else:
-                raise ParseError(f"Invalid block syntax at line {lineno}")
+                raise ParseError(f"Invalid block syntax at line {self._lineno}")
 
+            parse_newline()
             while lexer.peek().value != '}':
                 parse_expr()
             lexer.consume()
@@ -136,8 +142,10 @@ class ComfyParser:
             key = lexer.consume(2)[0]
             value = parse_value()
             if lexer.peek().value not in lexer.STMTEND:
-                raise ParseError(f"Missing ';' or newline on line {lineno} after '{value}'")
-            lexer.consume()
+                raise ParseError(f"Missing ';' or newline on line {self._lineno} after '{value}'")
+            if lexer.peek().value == ';':
+                lexer.consume()
+            parse_newline()
             block_stack[-1][key.value] = value
             logger.debug("exit stmt")
 
@@ -154,22 +162,23 @@ class ComfyParser:
             lexer.consume() # Pull off the starting '['
             rval: list[Union[str, list]] = []
             while True:
-                if lexer.peek().value == '\n':
-                    lexer.consume() # Allow arbitrary newlines
-                    lineno += 1
-                elif lexer.peek().value == '[':
+                parse_newline() # Allow arbitrary newlines
+                if lexer.peek().value == '[':
                     rval.append(parse_list()) # Support nested lists
                 elif lexer.peek().kind == LexerState.STRING:
                     rval.append(parse_string())
-                    if lexer.peek().value not in ',]':
-                        raise ParseError(f"Missing ',' or ']' at line {lineno}")
-                    token = lexer.consume()[0]
-                    if token.value == "]":
-                        break
                 else:
                     raise ParseError("Unexpected token '{}' in list on line {}".format(
-                        lexer.peek().value, lineno
+                        lexer.peek().value, self._lineno
                     ))
+                parse_newline()
+                if lexer.peek().value not in ',]':
+                    raise ParseError(f"Missing ',' or ']' at line {self._lineno}")
+                token = lexer.consume()[0]
+                parse_newline()
+                if token.value == "]":
+                    break
+
             logger.debug("exit list")
             return rval
 
@@ -178,9 +187,15 @@ class ComfyParser:
             logger.debug("enter string")
             token = lexer.consume()[0]
             if token.kind != LexerState.STRING:
-                raise ParseError(f"Expected string at line {lineno}, got {token.value}")
+                raise ParseError(f"Expected string at line {self._lineno}, got {token.value}")
+            self._lineno += token.value.count("\n") # Account for newlines in strings
             logger.debug("exit string")
             return token.value
+
+        def parse_newline() -> None:
+            while not lexer.is_exhausted() and lexer.peek().value == '\n':
+                lexer.consume()
+                self._lineno += 1
 
         try:
             while not lexer.is_exhausted():
