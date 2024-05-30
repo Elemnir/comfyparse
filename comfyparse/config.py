@@ -27,11 +27,12 @@ class Namespace:
     """
     def __init__(self, name: Optional[str] = None, **kwargs):
         self._attrs = dict(kwargs)
-        self.name = name if name else "<unnamed>"
+        self._name = name
+        self._repr_name = "Namespace" + (f"[{name}]" if name else "")
 
     def __getattr__(self, name: str) -> Any:
         if name.startswith("_") or name not in self._attrs:
-            raise AttributeError(f"Namespace {self.name} has no attribute '{name}'")
+            raise AttributeError(f"{self._repr_name} has no attribute '{name}'")
         return self._attrs[name]
 
     def __contains__(self, key: str) -> bool:
@@ -47,11 +48,12 @@ class Namespace:
         return self._attrs.__iter__()
 
     def __str__(self):
-        return f"{self.name}{{" + ", ".join(f"{k}: {v}" for k, v in self._attrs.items()) + "}"
+        contents = [ f"{k}: {v}" for k, v in self._attrs.items() ]
+        return f"{self._repr_name}{{" + ", ".join(contents) + "}"
 
     def copy(self) -> 'Namespace':
         """Return a new Namespace which is a copy of this one."""
-        return Namespace(name=self.name, **self._attrs)
+        return Namespace(name=self._name, **self._attrs)
 
     def get(self, key: str, default: Optional[Any] = None) -> Any:
         """Return the given key if it exists within this Namespace, otherwise return the
