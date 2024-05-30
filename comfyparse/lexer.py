@@ -94,7 +94,9 @@ class ComfyLexer:
                         self._tokens.append(Token(token, State.STRING))
                         self.state = State.READY
                     elif nchar in self.QUOTES:
-                        raise SyntaxError("Unexpected quote in non-string token")
+                        raise SyntaxError(
+                            f"Unexpected quote in unquoted string starting: {token}"
+                        )
                     else:
                         token += self._consume_char()
 

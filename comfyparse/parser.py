@@ -96,7 +96,7 @@ class ComfyParser:
 
         def parse_expr() -> None:
             """Grammar: expr = [stmt/block]"""
-            logger.debug("enter expr")
+            logger.debug(f"Line {self._lineno}: Enter expr")
             parse_newline()
             if lexer.is_exhausted():
                 return
@@ -107,11 +107,11 @@ class ComfyParser:
                 parse_block()
 
             parse_newline()
-            logger.debug("exit expr")
+            logger.debug(f"Line {self._lineno}: Exit expr")
 
         def parse_block() -> None:
             """Grammar: block = string [string] '{' *expr '}'"""
-            logger.debug("enter block")
+            logger.debug(f"Line {self._lineno}: Enter block")
             kind = lexer.consume()[0]
             if lexer.peek().value == '{':
                 lexer.consume()
@@ -134,11 +134,11 @@ class ComfyParser:
                 parse_expr()
             lexer.consume()
             block_stack.pop()
-            logger.debug("exit block")
+            logger.debug(f"Line {self._lineno}: Exit block")
 
         def parse_stmt() -> None:
             """Grammar: stmt = string ('=' / ':') value (';' / '\n')"""
-            logger.debug("enter stmt")
+            logger.debug(f"Line {self._lineno}: Enter stmt")
             key = lexer.consume(2)[0]
             value = parse_value()
             if lexer.peek().value not in lexer.STMTEND:
@@ -147,18 +147,18 @@ class ComfyParser:
                 lexer.consume()
             parse_newline()
             block_stack[-1][key.value] = value
-            logger.debug("exit stmt")
+            logger.debug(f"Line {self._lineno}: Exit stmt")
 
         def parse_value() -> Union[str, list[str]]:
             """Grammar: value = list / string"""
-            logger.debug("enter value")
-            if lexer.peek().value == '[':
-                return parse_list()
-            return parse_string()
+            logger.debug(f"Line {self._lineno}: Enter value")
+            rval = parse_list() if lexer.peek().value == '[' else parse_string()
+            logger.debug(f"Line {self._lineno}: Exit value")
+            return rval
 
         def parse_list() -> list:
             """Grammar: list = '[' value *(',' value) ']'"""
-            logger.debug("enter list")
+            logger.debug(f"Line {self._lineno}: Enter list")
             lexer.consume() # Pull off the starting '['
             rval: list[Union[str, list]] = []
             while True:
@@ -179,17 +179,17 @@ class ComfyParser:
                 if token.value == "]":
                     break
 
-            logger.debug("exit list")
+            logger.debug(f"Line {self._lineno}: Exit list")
             return rval
 
         def parse_string() -> str:
             """A string is any set of characters. Follows shell parsing rules."""
-            logger.debug("enter string")
+            logger.debug(f"Line {self._lineno}: Enter string")
             token = lexer.consume()[0]
             if token.kind != LexerState.STRING:
                 raise ParseError(f"Expected string at line {self._lineno}, got {token.value}")
             self._lineno += token.value.count("\n") # Account for newlines in strings
-            logger.debug("exit string")
+            logger.debug(f"Line {self._lineno}: Exit string")
             return token.value
 
         def parse_newline() -> None:
