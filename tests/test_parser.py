@@ -3,7 +3,7 @@ import logging
 import sys
 import unittest
 
-from comfyparse.parser import ComfyParser
+from comfyparse.parser import ComfyParser, ParseError
 from comfyparse.config import ConfigSpecError, ValidationError, Namespace
 
 logger = logging.getLogger("comfyparse")
@@ -34,7 +34,7 @@ class TestSettings(unittest.TestCase):
 
     def test_newline_as_value(self):
         config = self.parser.parse_config_string("log_path='\\n'\n")
-        print(config)
+        self.assertEqual(config.log_path, "\n")
 
     def test_override_default(self):
         config = self.parser.parse_config_string("log_path=/var/log/my.log\n log_level = 8;")
@@ -56,6 +56,13 @@ class TestSettings(unittest.TestCase):
     def test_validation_failure(self):
         with self.assertRaises(ValidationError):
             self.parser.parse_config_string("log_path=/var/log/my.log\n log_level = -5;")
+
+    def test_invalid_statement(self):
+        with self.assertRaises(ParseError):
+            self.parser.parse_config_string("log_path:=")
+
+        with self.assertRaises(ParseError):
+            self.parser.parse_config_string("log_path=unterminated")
 
 
 class TestBlocks(unittest.TestCase):
@@ -79,6 +86,17 @@ class TestBlocks(unittest.TestCase):
         self.assertTrue('web' in config.hostgroup)
         self.assertTrue(isinstance(config.hostgroup['web'], Namespace))
         self.assertTrue(config.hostgroup['web'].hosts == ['node01','node02'])
+
+    def test_invalid_block(self):
+        with self.assertRaises(ParseError):
+            config = self.parser.parse_config_string("hostgroup 'web' foo {")
+
+    def test_invalid_list(self):
+        with self.assertRaises(ParseError):
+            config = self.parser.parse_config_string("hostgroup 'foo' { hosts=[:")
+
+        with self.assertRaises(ParseError):
+            config = self.parser.parse_config_string("hostgroup 'foo' {hosts=[ a b")
 
 
 class TestNesting(unittest.TestCase):
@@ -112,4 +130,3 @@ class TestNesting(unittest.TestCase):
         self.assertTrue(
             'deepest' in config.nested.inner and isinstance(config.nested.inner.deepest, Namespace)
         )
-        print(config)
