@@ -2,7 +2,6 @@ import unittest
 
 from comfyparse.lexer import ComfyLexer
 
-
 simple_valid_text = """
 group servers {
     hosts = [ # end of line comments should work
@@ -26,3 +25,11 @@ class TestLexer(unittest.TestCase):
         lexer = ComfyLexer(simple_valid_text)
         lexer.tokenize()
         self.assertEqual([tk.value for tk in lexer._tokens], simple_valid_tokens)
+
+    def test_backslash_escapes(self):
+        self.assertEqual(ComfyLexer("'\\\\'").peek().value, "\\")
+        self.assertEqual(ComfyLexer("'\\n'").peek().value, "\n")
+
+    def test_quote_in_value(self):
+        with self.assertRaises(SyntaxError):
+            ComfyLexer("val'ue").peek()

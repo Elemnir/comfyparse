@@ -8,3 +8,4 @@ venv/
 py2venv/
 py3venv/
 docs/_build
+.coverage

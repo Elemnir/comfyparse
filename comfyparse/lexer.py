@@ -44,7 +44,7 @@ class ComfyLexer:
         return self._source[self._srcchar + k]
 
     def _consume_char(self, k: int=1) -> str:
-        char = self._source[self._srcchar]
+        char = self._source[self._srcchar:self._srcchar+k]
         self._srcchar += k
         return char
 
@@ -79,8 +79,7 @@ class ComfyLexer:
 
                 elif self.state == State.STRING:
                     if self._peek_char() == "\\":
-                        token += self._consume_char()
-                        token += self._consume_char()
+                        token += bytes(self._consume_char(2), 'utf-8').decode("unicode_escape")
                     elif self._peek_char() == token[0]:
                         self._consume_char()
                         self._tokens.append(Token(token[1:], self.state))

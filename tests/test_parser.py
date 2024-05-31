@@ -32,6 +32,10 @@ class TestSettings(unittest.TestCase):
         self.assertEqual(config.log_path, "/var/log/my.log")
         self.assertEqual(config.log_level, 5)
 
+    def test_newline_as_value(self):
+        config = self.parser.parse_config_string("log_path='\\n'\n")
+        print(config)
+
     def test_override_default(self):
         config = self.parser.parse_config_string("log_path=/var/log/my.log\n log_level = 8;")
         self.assertEqual(config.log_path, "/var/log/my.log")
