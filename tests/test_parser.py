@@ -62,6 +62,10 @@ class TestSettings(unittest.TestCase):
             self.parser.parse_config_string("log_path:=")
 
         with self.assertRaises(ParseError):
+            self.parser.parse_config_string("log_path=unterminated bar=foo")
+
+    def test_unexpected_eol_parse(self):
+        with self.assertRaises(ParseError):
             self.parser.parse_config_string("log_path=unterminated")
 
 
@@ -98,6 +102,9 @@ class TestBlocks(unittest.TestCase):
         with self.assertRaises(ParseError):
             config = self.parser.parse_config_string("hostgroup 'foo' {hosts=[ a b")
 
+    def test_lexer_syntax_error(self):
+        with self.assertRaises(ParseError):
+            config = self.parser.parse_config_string("val'ue")
 
 class TestNesting(unittest.TestCase):
     def setUp(self):
@@ -106,6 +113,10 @@ class TestNesting(unittest.TestCase):
         block = self.parser.add_block("nested")
         inner = block.add_block("inner")
         inner.add_block("deepest")
+
+    def test_only_newlines(self):
+        config = self.parser.parse_config_string("\n\n\n\n\n\n\n\n\n")
+
 
     def test_nested_list(self):
         config = self.parser.parse_config_string("nested_list:[[0,1],[1,0]];")
