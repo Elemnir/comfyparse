@@ -45,6 +45,10 @@ class TestSettings(unittest.TestCase):
         with self.assertRaises(ConfigSpecError):
             self.parser.add_setting("log_path")
 
+    def test_conflicting_options(self):
+        with self.assertRaises(ConfigSpecError):
+            self.parser.add_setting("conflict", required=True, default="foo")
+
     def test_missing_required_setting(self):
         with self.assertRaises(ValidationError):
             self.parser.parse_config_string("")
@@ -105,6 +109,7 @@ class TestBlocks(unittest.TestCase):
     def test_lexer_syntax_error(self):
         with self.assertRaises(ParseError):
             config = self.parser.parse_config_string("val'ue")
+
 
 class TestNesting(unittest.TestCase):
     def setUp(self):

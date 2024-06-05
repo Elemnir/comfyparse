@@ -9,6 +9,7 @@
     a ``Namespace`` and return it.
 """
 import logging
+import sys
 from collections.abc import Callable, Sequence
 from typing import Any, Optional, Union
 
@@ -25,8 +26,8 @@ class ParseError(Exception):
 
 class ComfyParser:
     """Creates a new ComfyParser object."""
-    def __init__(self):
-        self._config_spec = ConfigBlock("GLOBAL")
+    def __init__(self, name: Optional[str] = None, desc: str = ""):
+        self._config_spec = ConfigBlock(name if name is not None else sys.argv[0], desc=desc, required=True)
         self._lineno = 1
 
     def add_setting(
@@ -73,6 +74,12 @@ class ComfyParser:
         ``add_block`` methods to allow for hierarchical configuration construction.
         """
         return self._config_spec.add_block(kind, named, desc, required, validate)
+
+    def generate_docs(self) -> str:
+        """Returns a reStructuredText string consisting of documentation for the
+        configuration's supported blocks and settings.
+        """
+        return self._config_spec.generate_docs()
 
     def parse_config_file(self, path: str) -> Namespace:
         """Open and parse the contents of the given file path, returning the resulting
