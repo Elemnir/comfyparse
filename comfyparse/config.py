@@ -66,6 +66,24 @@ class Namespace:
         """
         return self._attrs.get(key, default)
 
+    def keys(self):
+        """Return all keys within the Namespace."""
+        return self._attrs.keys()
+
+    def merge(self, other: 'Namespace') -> None:
+        """Merges the contents of ``other`` into this Namespace."""
+        for key in set(self.keys()) | set(other.keys()):
+            if key not in other:
+                continue
+            if key not in self:
+                self[key] = other[key]
+            elif isinstance(self[key], Namespace) and isinstance(other[key], Namespace):
+                self[key].merge(other[key])
+            elif isinstance(self[key], dict) and isinstance(other[key], dict):
+                self[key].update(other[key])
+            else:
+                self[key] = other[key]
+
 
 class ConfigSetting:
     """Defines the specification for a single configuration setting.
@@ -185,6 +203,8 @@ class ConfigBlock:
         """
         if kind in self.settings or kind in self.children:
             raise ConfigSpecError(f"Duplicate use of setting name or block kind: {kind}")
+        if named and required:
+            raise ConfigSpecError(f"Named block kind '{kind}' can't also be required.")
         self.children[kind] = ConfigBlock(kind, named, desc, required, validate)
         return self.children[kind]
 
@@ -221,7 +241,7 @@ class ConfigBlock:
         """Returns a reStructuredText string containing documentation for this
         block and its settings, as well as the documentation of its child blocks.
         """
-        rval = self.kind + "\n" + (RST_SECTIONS[level % len(RST_SECTIONS)] * 10) + "\n\n" + self.desc
+        rval = self.kind + "\n" + (RST_SECTIONS[level%len(RST_SECTIONS)] * 10) + "\n\n" + self.desc
         if self.required and level > 0:
             rval += f"\n\nA ``{self.kind}`` block is required."
         if self.named:
@@ -238,9 +258,9 @@ class ConfigBlock:
                 rval += setting.render_as_table_row(lname, ldefault)
             rval += "\n" + ("=" * lname) + " " + ("=" * ldefault) + " ===========\n"
         if self.children:
-            rval += "\nThe following subblocks are required/supported:\n\n"
+            rval += "\nThe following subblocks are required/supported:"
             for block in sorted(self.children.values(), key=lambda x: not x.required):
-                rval += block.generate_docs(level+1) 
+                rval += "\n\n" + block.generate_docs(level+1)
         return rval
 
     def _get_doc_field_widths(self):
@@ -275,7 +295,9 @@ class ConfigBlock:
             if kind not in block:
                 if child.required:
                     raise ValidationError(f"Missing required block: {kind}")
-                continue
+                if child.named:
+                    continue
+                block[kind] = Namespace()
             if isinstance(block[kind], dict):
                 for key in block[kind]:
                     validated[kind][key] = child.validate_block(block[kind][key])

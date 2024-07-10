@@ -27,7 +27,9 @@ class ParseError(Exception):
 class ComfyParser:
     """Creates a new ComfyParser object."""
     def __init__(self, name: Optional[str] = None, desc: str = ""):
-        self._config_spec = ConfigBlock(name if name is not None else sys.argv[0], desc=desc, required=True)
+        self._config_spec = ConfigBlock(
+            name if name is not None else sys.argv[0], desc=desc, required=True
+        )
         self._lineno = 1
 
     def add_setting(
@@ -81,18 +83,37 @@ class ComfyParser:
         """
         return self._config_spec.generate_docs()
 
-    def parse_config_file(self, path: str) -> Namespace:
+    def parse_config_files(self, paths: list[str]) -> Namespace:
+        """Given a list of file paths, open and parse each, combining the results into a
+        single Namespace before returning the validated configuration Namespace.
+        """
+        result = Namespace()
+        for path in paths:
+            result.merge(self.parse_config_file(path, validate=False))
+        return self.validate(result)
+
+    def parse_config_file(self, path: str, validate: bool = True) -> Namespace:
         """Open and parse the contents of the given file path, returning the resulting
         configuration Namespace.
         """
         with open(path, 'r') as fp:
-            return self.parse_config_string(fp.read())
+            return self.parse_config_string(fp.read(), validate=validate)
 
-    def parse_config_string(self, data: str) -> Namespace:
+    def parse_config_string(self, data: str, validate: bool = True) -> Namespace:
         """Parse the contents of the given string, returning the resulting configuration
-        Namespace.
+        Namespace. Setting ``validate`` to False omits the validation and conversion
+        operations. This can be useful when constructing a configuration from multiple
+        sources, where validation should only be invoked after the complete configuration
+        object has been assembled, such as in ``ComfyParser.parse_config_files()``.
         """
-        return self._parse(data)
+        result = self._parse(data)
+        return self.validate(result) if validate else result
+
+    def validate(self, config: Namespace) -> Namespace:
+        """Given an unvalidated Namespace, perform validation and return the resulting
+        converted Namespace.
+        """
+        return self._config_spec.validate_block(config)
 
     def _parse(self, data: str) -> Namespace:
         lexer = ComfyLexer(data)
@@ -179,16 +200,16 @@ class ComfyParser:
                 elif lexer.peek().kind == LexerState.STRING:
                     rval.append(parse_string())
                 else:
-                    raise ParseError("Unexpected token '{}' in list on line {}".format(
-                        lexer.peek().value, self._lineno
-                    ))
+                    raise ParseError(
+                        "Unexpected token '{lexer.peek().value}' in list on line {self._lineno}"
+                    )
                 parse_newline()
                 if lexer.peek().value not in ',]':
                     raise ParseError(f"Missing ',' or ']' at line {self._lineno}")
                 token = lexer.consume()[0]
-                parse_newline()
                 if token.value == "]":
                     break
+                parse_newline()
 
             logger.debug("Line %s: Exit list", self._lineno)
             return rval
@@ -214,4 +235,4 @@ class ComfyParser:
         except IndexError as exc:
             raise ParseError("Unexpected EOF") from exc
 
-        return self._config_spec.validate_block(parsed)
+        return parsed

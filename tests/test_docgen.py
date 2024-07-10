@@ -22,12 +22,17 @@ log_path  /var/log/my.log Path where logs will be written
 
 The following subblocks are required/supported:
 
+debug
+----------
+
+Another block kind.
+
+A ``debug`` block is required.
+
 hostgroup
 ----------
 
 A group of hostnames to act on.
-
-A ``hostgroup`` block is required.
 
 Multiple ``hostgroup`` blocks can be defined and must include a name to distinguish them.
 
@@ -56,13 +61,14 @@ class TestDocGen(unittest.TestCase):
             required=True,
             choices=list(range(5)),
             convert=int)
-        block = self.parser.add_block("hostgroup", named=True, required=True, desc="A group of hostnames to act on.")
+        block = self.parser.add_block("hostgroup", named=True, desc="A group of hostnames to act on.")
         block.add_setting("hosts", required=True)
         block.add_setting(
             "timeout", default=datetime.timedelta(seconds=5),
             convert=lambda x: datetime.timedelta(seconds=float(x)),
             validate=lambda x: abs(x) == x
         )
+        self.parser.add_block("debug", required=True, desc="Another block kind.")
 
     def test_documentation_generation(self):
         docs = self.parser.generate_docs()

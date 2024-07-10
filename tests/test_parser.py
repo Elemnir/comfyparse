@@ -1,5 +1,8 @@
 import datetime
+import glob
 import logging
+import os
+import shutil
 import sys
 import unittest
 
@@ -146,3 +149,30 @@ class TestNesting(unittest.TestCase):
         self.assertTrue(
             'deepest' in config.nested.inner and isinstance(config.nested.inner.deepest, Namespace)
         )
+
+
+class TestMultiFile(unittest.TestCase):
+    def setUp(self):
+        os.mkdir('test.conf.d')
+        self.parser = ComfyParser()
+        lblock = self.parser.add_block("logging", required=True)
+        lblock.add_setting("log_path", default="/var/log/test.log")
+        lblock.add_setting("log_level", default=5, convert=int, validate=lambda x: abs(x) == x)
+        gblock = self.parser.add_block("group", named=True)
+        gblock.add_setting("hosts", required=True)
+        gblock.add_setting("timeout",
+            default=datetime.timedelta(seconds=5),
+            convert=lambda x: datetime.timedelta(seconds=float(x)),
+            validate=lambda x: abs(x) == x
+        )
+        with open("test.conf.d/main.conf", "w") as main_file:
+            main_file.write("logging {}\n")
+        with open("test.conf.d/core.conf", "w") as core_file:
+            core_file.write("group 'infra' {\n\thosts=[\n\t\tfoo, 'bar'\n\t]\n}\n")
+
+    def tearDown(self):
+        shutil.rmtree('test.conf.d')
+
+    def test_multiple_sources(self):
+        config = self.parser.parse_config_files(glob.glob('test.conf.d/*.conf'))
+        print(config)
