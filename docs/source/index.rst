@@ -98,7 +98,7 @@ ComfyParse is available on PyPI:
 
     pip install comfyparse
 
-Or, you can find it on Github at https://github.com/Elemnir/experipy.
+Or, you can find it on Github at https://github.com/Elemnir/comfyparse.
 
 .. toctree::
    :maxdepth: 2
@@ -111,5 +111,4 @@ Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
