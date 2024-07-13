@@ -67,7 +67,7 @@ class ComfyParser:
         :param desc: A description of the block. Included in automatic documentation.
         :param required: Whether the block may be omitted. (Default ``False``)
         :param validate: Optionally, a callable which accepts the block after each field
-        has been validated and returns whether or not is is valid.
+            has been validated and returns whether or not is is valid.
 
         :raise comfyparse.config.ConfigSpecError: Raised if the kind identifier is already
             in use.

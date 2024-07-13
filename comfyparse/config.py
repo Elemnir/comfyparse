@@ -27,7 +27,7 @@ class Namespace:
     contents.
 
     :param name: An optional name to help identify the namespace.
-    :param **kwargs: All keyword arguments are treated as entries in the
+    :param \**kwargs: All keyword arguments are treated as entries in the
         internally-managed dictionary.
     """
     def __init__(self, name: Optional[str] = None, **kwargs):
@@ -190,7 +190,7 @@ class ConfigBlock:
         :param desc: A description of the block. Included in automatic documentation.
         :param required: Whether the block may be omitted. (Default ``False``)
         :param validate: Optionally, a callable which accepts the block after each field
-        has been validated and returns whether or not is is valid.
+            has been validated and returns whether or not is is valid.
 
         :raise comfyparse.config.ConfigSpecError: Raised if the kind identifier is already
             in use within this block.
