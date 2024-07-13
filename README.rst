@@ -36,7 +36,7 @@ dictionary-like namespace object mirroring the structure of the configuration.
         hosts = [ # end of line comments work
             "node01", "node02"
         ] % multiple flavors too
-        timeout = 30.0f
+        timeout = 30.0
     }
     log_path=/var/log/my.log
 

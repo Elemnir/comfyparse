@@ -27,7 +27,7 @@ class Namespace:
     contents.
 
     :param name: An optional name to help identify the namespace.
-    :param \**kwargs: All keyword arguments are treated as entries in the
+    :param kwargs: All keyword arguments are treated as entries in the
         internally-managed dictionary.
     """
     def __init__(self, name: Optional[str] = None, **kwargs):
