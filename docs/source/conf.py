@@ -6,6 +6,9 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import sys
+sys.path.append("../..")
+
 project = 'ComfyParse'
 copyright = '2024, Adam Howard'
 author = 'Adam Howard'
