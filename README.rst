@@ -1,6 +1,6 @@
-============
- ComfyParse
-============
+===============================================
+ ComfyParse: A more comfy configuration system
+===============================================
 
 Configuration definition, parsing, and validation, in the style of ``argparse``.
 
@@ -66,7 +66,7 @@ The example below sets up ComfyParse to handle a document such as the example ab
     parser = comfyparse.ComfyParser("demoapp")
     parser.add_setting("log_path", desc="The path where logs go.", required=True)
     parser.add_setting("log_level", default=1, choices=[1,2,3,4,5], convert=int)
-    group_block = parser.add_block("group", named=True, required=True)
+    group_block = parser.add_block("group", named=True)
     group_block.add_setting("hosts", required=True)
     group_block.add_setting("timeout", default=5.0, convert=float)
 
@@ -78,7 +78,7 @@ Once a schema such as this has been defined, configuration strings can be parsed
     # Directly from a string
     config = parser.parse_config_string(confstr)
     # Alternatively, from a file path
-    config = parser.parse_config_path("/path/to/file")
+    config = parser.parse_config_file("/path/to/file")
 
 Lastly, the parser can generate a reStructuredText string outlining the schema for automatic documentation purposes, or just to provide a starting point when writing your own documentation.
 
@@ -97,3 +97,8 @@ ComfyParse can be installed using PyPI and requires no external dependencies.
 
     > pip install comfyparse
 
+---------------
+ Documentation
+---------------
+
+Full documentation for comfyparse can be found at https://comfyparse.readthedocs.io
